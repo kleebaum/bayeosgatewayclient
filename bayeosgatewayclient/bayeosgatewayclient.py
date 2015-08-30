@@ -137,6 +137,15 @@ class BayEOSWriter(object):
             origin_frame.create(origin=origin, nested_frame=msg_frame.frame)
             self.__save_frame(origin_frame.frame, timestamp)
             # print 'Origin Frame saved.'
+            
+    def save_frame(self,frame,timestamp=0, origin=None):
+        """Saves a BayEOS Frame either as it is or wrapped in an Origin Frame."""
+        if not origin:
+            self.__save_frame(frame,timestamp); 
+        else:
+            origin_frame = BayEOSFrame.factory(0xb)
+            origin_frame.create(origin=origin, nested_frame=frame)
+            self.__save_frame(origin_frame.frame, timestamp)
 
     def flush(self):
         """Close the current used file and renames it from .act to .rd.
