@@ -1,19 +1,19 @@
 # bayeosgatewayclient
-A generic Python module to transfer client (sensor) data to a BayEOS Gateway.
+A Python package to transfer client (sensor) data to a BayEOS Gateway.
 
 ## Installation
-You can use either the setup.py script, pip or a Linux binary to install the package.
+You can either use the setup.py script, the Python Package Index (PIP) or a Linux binary to install the package.
 
 ### Setup.py
 Do the following steps to install the package via the setup.py script:
-- git clone request ```git clone git://github.com/kleebaum/bayeos.git```
-- find the right directory ```cd bayeos/bayeosgatewayclient```
+- git clone request ```git clone git://github.com/kleebaum/bayeosgatewayclient.git```
+- find the right directory ```cd bayeosgatewayclient```
 - run ```python setup.py install``` as root
 
 ### PIP
+- run ```pip2.7 install bayeosgatewayclient```
 
-### Linux Binary
-#### Debian
+### Linux Binary (for Debian)
 - add the following repositories to /etc/apt/sources.list ```deb http://www.bayceer.uni-bayreuth.de/repos/apt/debian wheezy main```
 - install key ```wget -O - http://www.bayceer.uni-bayreuth.de/repos/apt/conf/bayceer_repo.gpg.key | apt-key add -```
 - ```apt-get update```
