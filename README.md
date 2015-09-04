@@ -1,6 +1,8 @@
 # bayeosgatewayclient
 A Python package to transfer client (sensor) data to a BayEOS Gateway.
 
+![](https://github.com/kleebaum/writer-sender.png)
+
 ## Installation
 You can either use the setup.py script, the Python Package Index (PIP) or a Linux binary to install the package.
 
@@ -136,12 +138,14 @@ NAMES = ['PythonTestDevice1', 'PythonTestDevice2', 'PythonTestDevice3']
 class PythonTestDevice(BayEOSGatewayClient):
     """Creates both a writer and sender instance for every NAME in NAMES. Implements BayEOSGatewayClient."""
     def read_data(self):
+    	"""Must be overwritten."""
         if self.name == 'PythonTestDevice1':
             return (2.1, 3, 20.5)
         else:
             return (42)
         
     def save_data(self, data=0, origin=''):
+    	"""Can be overwritten."""
         if self.name == 'PythonTestDevice1':
             self.writer.save(data, origin='origin')
             self.writer.save_msg('Overwritten method.')
