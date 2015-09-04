@@ -1,7 +1,7 @@
 # bayeosgatewayclient
 A Python package to transfer client (sensor) data to a BayEOS Gateway.
 
-![](https://github.com/kleebaum/writer-sender.png)
+![basic concept](https://github.com/kleebaum/bayeosgatewayclient/blob/master/writer-sender.png)
 
 ## Installation
 You can either use the setup.py script, the Python Package Index (PIP) or a Linux binary to install the package.
