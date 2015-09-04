@@ -25,14 +25,14 @@ Alternatively:
 ## Example usage
 Import the package ```import bayeosgatewayclient```.
 
-### Example writer
+### Writer
 A simple writer looks like this:
 ```
 from time import sleep
 from bayeosgatewayclient import BayEOSWriter
 
 writer = BayEOSWriter('/tmp/bayeos-device1/')
-writer.saveMessage('BayEOS Writer was started.')
+writer.save_msg('BayEOS Writer was started.')
 
 while True:
     print 'adding frame\n'
@@ -40,7 +40,7 @@ while True:
     sleep(1)
 ```
 
-A BayEOSWriter constructor could also take the following arguments:
+A BayEOSWriter constructor takes the following arguments:
 ```
 PATH = '/tmp/bayeos-device1/'	# directory to store .act and .rd files
 MAX_CHUNK = 2000				# file size in bytes
@@ -56,14 +56,14 @@ The following methods could also be of interest:
 - save origin: ```writer.save([2.1, 3, 20.5], origin='Writer-Example')```
 - save error message: ```writer.save_msg('error message', error=True)```
 
-### Example sender
+### Sender
 A simple sender looks like this:
 ```
 from time import sleep
 from bayeosgatewayclient import BayEOSSender
 
 sender = BayEOSSender('/tmp/bayeos-device1/', 
-					  'Python-Test-Device', 
+					  'Test-Device', 
 					  'http://bayconf.bayceer.uni-bayreuth.de/gateway/frame/saveFlat')
 
 while True:
@@ -73,51 +73,80 @@ while True:
     sleep(5)
 ```
 
-A BayEOSSender constructor could also take the following arguments:
+A BayEOSSender constructor takes the following arguments:
 ```
 PATH = '/tmp/bayeos-device1/'	# directory to look for .rd files
-NAME = 'Python-Test-Device'
+NAME = 'Test-Device'
 URL = 'http://bayconf.bayceer.uni-bayreuth.de/gateway/frame/saveFlat'
 USER = 'import'					# user name to access the BayEOS Gateway
 PASSWORD = 'import'				# password to access the BayEOS Gateway
-BACKUP_PATH = '/home/.../' 		# backup path to store file if a) sending does not work or 
-								  b) sending was successful but files but files shall be kept 
-								  (renamed from .rd to .bak extension)
+BACKUP_PATH = '/home/.../' 		# backup path to store file if a) sending does not work 
+								  or b) sending was successful but files but files 
+								  shall be kept (renamed from .rd to .bak extension)
 
 sender = BayEOSSender(path=PATH, 
 					  name=NAME, 
 					  url=URL, 
 					  password=PASSWORD,
 					  user=USER,
-					  absolute_time=True, # if true writer time, else sender time is used
-					  remove=True,		  # .rd files will be deleted after successfully sent
+					  absolute_time=True, # if true writer, else sender time is used
+					  remove=True,		  # .rd files deleted after successfully sent
 					  backup_path=BACKUP_PATH)
 ```
 
 The following methods could also be of interest:
 - substitute the loop: ```sender.run(sleep_sec=5)```
 - start sender as a separate thread ```sender.start(sleep_sec=5)```
+- start sender as a separate process ```sender.start(sleep_sec=5, thread=False)```
 
-### Example client
+### Connect writer and sender
+Usually, the writer and sender are operating concurrently, although they are not
+linked directly, i. e., they only share the same directory. 
+
+A simple script to connect one writer-sender pair looks like this:
+```
+from bayeosgatewayclient import BayEOSWriter, BayEOSSender
+
+PATH = '/tmp/bayeos-device/'
+NAME = 'Writer-Sender-Example'
+URL = 'http://bayconf.bayceer.uni-bayreuth.de/gateway/frame/saveFlat'
+
+writer = BayEOSWriter(PATH)
+writer.save_msg('Writer was started.')
+
+sender = BayEOSSender(PATH, NAME, URL)
+sender.start() 	# sender runs in a concurrent thread
+
+while True:
+    print 'adding frame'
+    writer.save([2.1, 3, 20.5])
+    sleep(5)
+```
+
+Another way to combine writer-sender pairs is using the BayEOSGatewayClient class:
 ```
 from bayeosgatewayclient import BayEOSGatewayClient
-from random import randint
 
 OPTIONS = {'bayeosgateway_url' : 'http://bayconf.bayceer.uni-bayreuth.de/gateway/frame/saveFlat',
-           'bayeosgateway_user' : 'root',
-           'bayeosgateway_pw' : 'bayeos',
-           'sender' : 'anja'}
+           'bayeosgateway_password' : 'import',
+           'bayeosgateway_user' : 'import'}
 
 NAMES = ['PythonTestDevice1', 'PythonTestDevice2', 'PythonTestDevice3']
 
 class PythonTestDevice(BayEOSGatewayClient):
-    """Creates both a writer and sender instance for every NAME. Implements BayEOSGatewayClient."""
-    def readData(self):
-        if self.names[self.i] == 'PythonTestDevice1':
-            return (randint(-1, 1), 3, 4)
+    """Creates both a writer and sender instance for every NAME in NAMES. Implements BayEOSGatewayClient."""
+    def read_data(self):
+        if self.name == 'PythonTestDevice1':
+            return (2.1, 3, 20.5)
         else:
-            return (2, 1.0, randint(-1, 1))
-print OPTIONS
+            return (42)
+        
+    def save_data(self, data=0, origin=''):
+        if self.name == 'PythonTestDevice1':
+            self.writer.save(data, origin='origin')
+            self.writer.save_msg('Overwritten method.')
+        elif self.name == 'PythonTestDevice2':
+            self.writer.save(data)
 
 client = PythonTestDevice(NAMES, OPTIONS)
 

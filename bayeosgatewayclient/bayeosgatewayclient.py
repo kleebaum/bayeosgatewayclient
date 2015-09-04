@@ -319,11 +319,14 @@ class BayEOSSender(object):
                 print 'Successfully sent ' + str(res) + ' frames.'
             sleep(sleep_sec)
 
-    def start(self, sleep_sec=DEFAULTS['sender_sleep_time']):
-        """Starts a thread to run the sender in background
+    def start(self, sleep_sec=DEFAULTS['sender_sleep_time'], thread=True):
+        """Starts a thread or a process to run the sender concurrently
         @param sleep_sec: specifies the sleep time
         """
-        start_new_thread(self.run, (sleep_sec,))
+        if thread:
+            start_new_thread(self.run, (sleep_sec,))
+        else:
+            Process(target=self.run, args=(sleep_sec,)).start()
 
 class BayEOSGatewayClient(object):
     """Combines writer and sender for every device."""
