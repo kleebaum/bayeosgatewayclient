@@ -15,5 +15,5 @@ sender.run()
 # while True:
 #     res = sender.send()
 #     if res > 0:
-#         print 'Successfully sent ' + str(res) + ' frames.\n'
+#         print 'Successfully sent ' + str(res) + ' frames.'
 #     sleep(5)

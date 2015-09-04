@@ -23,7 +23,7 @@ Alternatively:
 - run ```dpkg -i python-bayeosgatewayclient_0.1-1_all.deb``` as root
 
 ## Example usage
-- import the module ```import bayeosgatewayclient```
+Import the package ```import bayeosgatewayclient```.
 
 ### Example writer
 A simple writer looks like this:
@@ -42,7 +42,7 @@ while True:
 
 A BayEOSWriter constructor could also take the following arguments:
 ```
-PATH = '/tmp/bayeos-device1/'	# path to store .act and .rd files
+PATH = '/tmp/bayeos-device1/'	# directory to store .act and .rd files
 MAX_CHUNK = 2000				# file size in bytes
 MAX_TIME = 60					# time when a new file is started in seconds
 writer = BayEOSWriter(path=PATH, max_chunk=MAX_CHUNK, max_time=MAX_TIME)
@@ -51,29 +51,52 @@ writer = BayEOSWriter(path=PATH, max_chunk=MAX_CHUNK, max_time=MAX_TIME)
 The following methods could also be of interest:
 - save integer values: ```writer.save(values=[1,2,3], value_type=0x22)```
 - save with channel indices: ```writer.save([[1,2.1], [2,3], [3,20.5]], value_type=0x41)``` or
-  ```writer.save({1: 2.1, 2: 3, 3: 20.5}, value_type=0x41)
+  ```writer.save({1: 2.1, 2: 3, 3: 20.5}, value_type=0x41)```
 - save with channel offset: ```writer.save([2.1, 3, 20.5], value_type=0x02, offset=2)```
 - save origin: ```writer.save([2.1, 3, 20.5], origin='Writer-Example')```
-- save error message: ```writer.save_msg('error message', error=True)
+- save error message: ```writer.save_msg('error message', error=True)```
 
 ### Example sender
-
-This is how the BayEOSSender class is instantiated:
+A simple sender looks like this:
 ```
 from time import sleep
 from bayeosgatewayclient import BayEOSSender
 
-PATH = '/tmp/bayeos-device1/'
-NAME = 'Python-Test-Device'
-URL = 'http://bayconf.bayceer.uni-bayreuth.de/gateway/frame/saveFlat'
-sender = BayEOSSender(PATH, NAME, URL, 'bayeos', 'root')
+sender = BayEOSSender('/tmp/bayeos-device1/', 
+					  'Python-Test-Device', 
+					  'http://bayconf.bayceer.uni-bayreuth.de/gateway/frame/saveFlat')
 
 while True:
     res = sender.send()
     if res > 0:
-        print 'Successfully sent ' + str(res) + ' post requests.\n'
+        print 'Successfully sent ' + str(res) + ' frames.'
     sleep(5)
 ```
+
+A BayEOSSender constructor could also take the following arguments:
+```
+PATH = '/tmp/bayeos-device1/'	# directory to look for .rd files
+NAME = 'Python-Test-Device'
+URL = 'http://bayconf.bayceer.uni-bayreuth.de/gateway/frame/saveFlat'
+USER = 'import'					# user name to access the BayEOS Gateway
+PASSWORD = 'import'				# password to access the BayEOS Gateway
+BACKUP_PATH = '/home/.../' 		# backup path to store file if a) sending does not work or 
+								  b) sending was successful but files but files shall be kept 
+								  (renamed from .rd to .bak extension)
+
+sender = BayEOSSender(path=PATH, 
+					  name=NAME, 
+					  url=URL, 
+					  password=PASSWORD,
+					  user=USER,
+					  absolute_time=True, # if true writer time, else sender time is used
+					  remove=True,		  # .rd files will be deleted after successfully sent
+					  backup_path=BACKUP_PATH)
+```
+
+The following methods could also be of interest:
+- substitute the loop: ```sender.run(sleep_sec=5)```
+- start sender as a separate thread ```sender.start(sleep_sec=5)```
 
 ### Example client
 ```
