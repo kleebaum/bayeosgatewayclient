@@ -77,7 +77,7 @@ class DataFrame(BayEOSFrame):
     """Data Frame Factory class."""
     def create(self, values=(), value_type=0x41, offset=0):
         """Creates a BayEOS Data Frame.
-        @param values: list with [channel index, value] tuples
+        @param values: list, tuple or dictionary with channel number keys
         @param value_type: defines Offset and Data Type
         @param offset: length of Channel Offset (if Offset Type is 0x0)
         """

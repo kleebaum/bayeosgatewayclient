@@ -26,28 +26,39 @@ Alternatively:
 - import the module ```import bayeosgatewayclient```
 
 ### Example writer
-Run the method ```bayeosgatewayclient.samplewriter()``` for a demo. 
-
-This is how to see how the BayEOSWriter class is instantiated.
+A simple writer looks like this:
 ```
 from time import sleep
 from bayeosgatewayclient import BayEOSWriter
 
-PATH = '/tmp/bayeos-device1/'
-writer = BayEOSWriter(PATH, 100)
+writer = BayEOSWriter('/tmp/bayeos-device1/')
+writer.saveMessage('BayEOS Writer was started.')
 
 while True:
     print 'adding frame\n'
-    writer.save(values=[2.1, 3, 20.5], valueType=0x02, offset=2)
-    writer.saveMessage("This is a message.")
-    writer.saveErrorMessage("This is an error message.")
+    writer.save([2.1, 3, 20.5])
     sleep(1)
 ```
 
-### Example sender
-Run the method ```bayeosgatewayclient.samplesender()``` for a demo.
+A BayEOSWriter constructor could also take the following arguments:
+```
+PATH = '/tmp/bayeos-device1/'	# path to store .act and .rd files
+MAX_CHUNK = 2000				# file size in bytes
+MAX_TIME = 60					# time when a new file is started in seconds
+writer = BayEOSWriter(path=PATH, max_chunk=MAX_CHUNK, max_time=MAX_TIME)
+```
 
-This is how how the BayEOSSender class is instantiated:
+The following methods could also be of interest:
+- save integer values: ```writer.save(values=[1,2,3], value_type=0x22)```
+- save with channel indices: ```writer.save([[1,2.1], [2,3], [3,20.5]], value_type=0x41)``` or
+  ```writer.save({1: 2.1, 2: 3, 3: 20.5}, value_type=0x41)
+- save with channel offset: ```writer.save([2.1, 3, 20.5], value_type=0x02, offset=2)```
+- save origin: ```writer.save([2.1, 3, 20.5], origin='Writer-Example')```
+- save error message: ```writer.save_msg('error message', error=True)
+
+### Example sender
+
+This is how the BayEOSSender class is instantiated:
 ```
 from time import sleep
 from bayeosgatewayclient import BayEOSSender
@@ -65,7 +76,6 @@ while True:
 ```
 
 ### Example client
-Run the method ```bayeosgatewayclient.sampleclient()``` for a demo.
 ```
 from bayeosgatewayclient import BayEOSGatewayClient
 from random import randint
