@@ -22,7 +22,7 @@ Do the following steps to install the package via the setup.py script:
 - ```apt-get install python-bayeosgatewayclient```
 
 Alternatively:
-- run ```dpkg -i python-bayeosgatewayclient_0.1-1_all.deb``` as root
+- run ```dpkg -i python-bayeosgatewayclient_*_all.deb``` as root
 
 ## Example usage
 Import the package ```import bayeosgatewayclient```.

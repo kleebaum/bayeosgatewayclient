@@ -10,9 +10,9 @@ from bayeosframe import BayEOSFrame
 from abc import abstractmethod
 from multiprocessing import Process
 from threading import Thread
-import subprocess
 from thread import start_new_thread
 import argparse
+import ConfigParser
 
 DEFAULTS = {'path' : gettempdir(),
             'writer_sleep_time' : 5,
@@ -21,6 +21,8 @@ DEFAULTS = {'path' : gettempdir(),
             'max_time' : 60,
             'value_type' : 0x41,
             'sender_sleep_time' : 5,
+            'name' : '',
+            'url' : '',
             'bayeosgateway_pw' : 'import',
             'bayeosgateway_user' : 'import',
             'absolute_time' : True,
@@ -29,7 +31,9 @@ DEFAULTS = {'path' : gettempdir(),
             'backup_path' : None}
 
 def bayeos_argparser(description = ''):
-    """Parses command line arguments useful for this package."""
+    """Parses command line arguments useful for this package.
+    @param description: text to appear on the command line
+    """
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('-n', '--name', default='BayEOS-Device',
                     help='name to appear in Gateway')
@@ -50,8 +54,28 @@ def bayeos_argparser(description = ''):
 
     return parser.parse_args()
 
+def bayeos_confparser(config_file):
+    """Reads a config file and returns a Python dictionary.
+    @param config_file: path to the config file
+    """
+    config_parser = ConfigParser.ConfigParser()
+    config = {}
+    try:
+        config_parser.read(config_file)
+        for section in config_parser.sections():
+            for key, value in config_parser.items(section):
+                try:
+                    value = int(value)
+                except:
+                    None
+                config[key] = value
+    except ConfigParser.Error as e:
+        print str(e) + '. Config File not found or corrupt.'
+    return config
+
 class BayEOSWriter(object):
     """Writes BayEOSFrames to file."""
+    
     def __init__(self, path=DEFAULTS['path'], max_chunk=DEFAULTS['max_chunk'],
                  max_time=DEFAULTS['max_time']):
         """Constructor for a BayEOSWriter instance.
@@ -158,7 +182,9 @@ class BayEOSWriter(object):
 
 class BayEOSSender(object):
     """Sends content of BayEOS writer files to Gateway."""
-    def __init__(self, path=DEFAULTS['path'], name='', url='',
+    def __init__(self, path=DEFAULTS['path'], 
+                 name=DEFAULTS['name'], 
+                 url=DEFAULTS['url'],
                  password=DEFAULTS['bayeosgateway_pw'],
                  user=DEFAULTS['bayeosgateway_user'],
                  absolute_time=DEFAULTS['absolute_time'],
