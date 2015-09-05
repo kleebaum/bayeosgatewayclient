@@ -1,0 +1,19 @@
+; Sample Config file for bayeosgatewayclient
+
+[Overall]
+name = Test-Device
+path = /tmp/bayeos-device
+
+[Writer]
+max_time = 100
+max_chunk = 2000
+writer_sleep_time = 1
+
+[Sender]
+sender_sleep_time = 10
+url = http://bayconf.bayceer.uni-bayreuth.de/gateway/frame/saveMatrix
+bayeosgateway_user = import
+bayeosgateway_pw = import
+absolute_time = True
+remove = False
+backup_path = /home/pi/backup/

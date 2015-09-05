@@ -156,3 +156,67 @@ client = PythonTestDevice(NAMES, OPTIONS)
 
 client.run()
 ```
+
+### Parsing command line arguments
+Constructor arguments can be passed as command line arguments:
+
+long option 	| short option	| description
+----------------|---------------|-------------------------
+−−name			|-n				|name to appear in Gateway
+−−path			|-p				|path to store writer files before they are sent
+−−max-chunk		|-m				|maximal file size [bytes] before a new file is started
+−−writer-sleep	|-ws			|writer sleep time [seconds]
+−−sender-sleep	|-ss			|sender sleep time [seconds]
+−−password		|-pw			|password to access BayEOS Gateway
+−−user			|-un			|user name to BayEOS Gateway
+−−url 			|-u				|URL to access BayEOS Gateway
+
+```
+from bayeosgatewayclient import BayEOSWriter, bayeos_argparser
+args = bayeos_argparser('This text appears on the command line.')
+
+WRITER_SLEEP = float(args.writer_sleep)
+MAX_CHUNK = float(args.max_chunk)
+writer = BayEOSWriter(max_chunk=MAX_CHUNK)
+
+while True:
+    writer.save([42, 20.5], value_type=0x21)
+    sleep(WRITER_SLEEP)
+```
+
+That is what could appear on the command line:
+```python2.7 example_script.py -m 2560 -ws 5```
+
+### Parsing config files
+First, a config file has to be created, e.g.:
+```
+; Sample Config file for bayeosgatewayclient
+
+[Overall]
+name = Test-Device
+path = /tmp/bayeos-device
+
+[Writer]
+max_time = 100
+max_chunk = 2000
+writer_sleep_time = 1
+
+[Sender]
+sender_sleep_time = 10
+url = http://bayconf.bayceer.uni-bayreuth.de/gateway/frame/saveMatrix
+bayeosgateway_user = import
+bayeosgateway_pw = import
+absolute_time = True
+remove = False
+backup_path = /home/pi/backup/
+```
+
+Second, the Python script needs to invoke the ```bayeos_confparser(config_file)``` method.
+
+```
+from bayeosgatewayclient import BayEOSWriter, BayEOSSender, bayeos_confparser
+config = bayeos_confparser('config')
+
+writer = BayEOSWriter(config['path'], config['max_chunk'])
+sender = BayEOSSender(config['path'])
+```
