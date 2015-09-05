@@ -13,7 +13,7 @@ Do the following steps to install the package via the setup.py script:
 - run ```python setup.py install``` as root
 
 ### PIP
-- run ```pip2.7 install bayeosgatewayclient```
+- run ```pip install bayeosgatewayclient```
 
 ### Linux Binary (for Debian)
 - add the following repositories to /etc/apt/sources.list ```deb http://www.bayceer.uni-bayreuth.de/repos/apt/debian wheezy main```
