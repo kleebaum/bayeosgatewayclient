@@ -57,6 +57,7 @@ The following methods could also be of interest:
 - save with channel offset: ```writer.save([2.1, 3, 20.5], value_type=0x02, offset=2)```
 - save origin: ```writer.save([2.1, 3, 20.5], origin='Writer-Example')```
 - save error message: ```writer.save_msg('error message', error=True)```
+- close current .act file and start a new one: ```writer.flush()```
 
 ### Sender
 A simple sender looks like this:

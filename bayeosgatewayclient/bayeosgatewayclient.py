@@ -3,7 +3,7 @@ import os, string, urllib, urllib2, base64, re, sys
 from os import chdir, rename
 from tempfile import gettempdir
 from struct import pack, unpack
-from _socket import gethostname
+from socket import gethostname
 from time import sleep, time
 from glob import glob
 from bayeosframe import BayEOSFrame
@@ -162,10 +162,10 @@ class BayEOSWriter(object):
             self.__save_frame(origin_frame.frame, timestamp)
             # print 'Origin Frame saved.'
             
-    def save_frame(self,frame,timestamp=0, origin=None):
+    def save_frame(self, frame, timestamp=0, origin=None):
         """Saves a BayEOS Frame either as it is or wrapped in an Origin Frame."""
         if not origin:
-            self.__save_frame(frame,timestamp); 
+            self.__save_frame(frame, timestamp); 
         else:
             origin_frame = BayEOSFrame.factory(0xb)
             origin_frame.create(origin=origin, nested_frame=frame)
@@ -430,6 +430,7 @@ class BayEOSGatewayClient(object):
         return self.options[key]
 
     def __start_writer(self, path):
+        """Instantiates a BayEOSWriter object and starts an endless loop for data acquisition."""
         self.init_writer()
         self.writer = BayEOSWriter(path, self.__get_option('max_chunk'),
                                     self.__get_option('max_time'))
@@ -442,9 +443,10 @@ class BayEOSGatewayClient(object):
             sleep(self.__get_option('writer_sleep_time'))
 
     def __start_sender(self, path):
+        """Instantiates a BayEOSSender object and starts an endless loop for frame sending."""
         self.sender = BayEOSSender(path,
                                    self.__get_option('sender'),
-                                   self.__get_option('bayeosgateway_url'),
+                                   self.__get_option('url'),
                                    self.__get_option('bayeosgateway_password'),
                                    self.__get_option('bayeosgateway_user'),
                                    self.__get_option('absolute_time'),
@@ -454,40 +456,21 @@ class BayEOSGatewayClient(object):
             self.sender.send()
             sleep(self.__get_option('sender_sleep_time'))
 
-    def __start_sender_writer_pair(self, path, thread=True, interlaced=False):
-        if interlaced:
-            self.init_writer()
-            self.writer = BayEOSWriter(path, self.__get_option('max_chunk'),
-                                        self.__get_option('max_time'))
-            self.writer.save_msg('Started writer for ' + self.name)
-            self.sender = BayEOSSender(path,
-                                       self.__get_option('sender'),
-                                       self.__get_option('bayeosgateway_url'),
-                                       self.__get_option('bayeosgateway_password'),
-                                       self.__get_option('bayeosgateway_user'),
-                                       self.__get_option('absolute_time'),
-                                       self.__get_option('remove'),
-                                       self.__get_option('backup_path'))
-            print 'Started writer and sender interlaced for ' + self.name + ' with pid ' + str(os.getpid())
-            while True:
-                data = self.read_data()
-                if data:
-                    self.save_data(data)
-                self.sender.send()
-                sleep(self.__get_option('writer_sleep_time'))
+    def __start_sender_writer_pair(self, path, thread=True):
+        """Creates a sender-writer pair.
+        @param thread: if True sender runs in a thread
+        """
         if thread:
             Thread(target=self.__start_sender, args=(path,)).start()
         else:
-            # subprocess.Popen(self.__start_sender(path))
             Process(target=self.__start_sender, args=(path,)).start()
         self.__start_writer(path)
 
-    def run(self, pair=True, thread=True, interlaced=False):
+    def run(self, pair=True, thread=True):
         """Runs the BayEOSGatewayClient.
         Creates an own process for an instance of BayEOSWriter and BayEOSSender per device name.
-        @param pair: when False writer and sender are working in different processes, other parameters will be ignored
-        @param thread: when True sender runs in a thread
-        @param interlaced: when True writer and sender are in a single loop
+        @param pair: if False writer and sender started in two processes, other parameters will be ignored
+        @param thread: if True sender runs in a thread
         """
         print 'Parent pid is ' + str(os.getpid())
         for each_name in self.names:
@@ -497,8 +480,7 @@ class BayEOSGatewayClient(object):
                 Process(target=self.__start_sender, args=(path,)).start()
                 Process(target=self.__start_writer, args=(path,)).start()
             else:
-                # subprocess.Popen(self.__start_sender_writer_pair(path, thread, interlaced))
-                Process(target=self.__start_sender_writer_pair, args=(path, thread, interlaced)).start()
+                Process(target=self.__start_sender_writer_pair, args=(path, thread)).start()
 
     @abstractmethod
     def init_writer(self):
