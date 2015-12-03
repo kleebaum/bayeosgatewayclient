@@ -141,7 +141,6 @@ class BayEOSWriter(object):
             origin_frame = BayEOSFrame.factory(0xb)
             origin_frame.create(origin=origin, nested_frame=data_frame.frame)
             self.__save_frame(origin_frame.frame, timestamp)
-            print 'Origin Frame saved.'
 
     def save_msg(self, message, error=False, timestamp=0, origin=None):
         """Saves Messages or Error Messages to Gateway.
@@ -340,10 +339,13 @@ class BayEOSSender(object):
         @param sleep_sec: specifies the sleep time
         """
         while True:
-            res = self.send()
-            if res > 0:
-                print 'Successfully sent ' + str(res) + ' frames.'
-            sleep(sleep_sec)
+            try:
+                res = self.send()
+                if res > 0:
+                    print 'Successfully sent ' + str(res) + ' frames.'
+                sleep(sleep_sec)
+            except Exception as err:
+                sys.stderr.write('Exception:' + str(err) + '\n') 
 
     def start(self, sleep_sec=DEFAULTS['sender_sleep_time'], thread=True):
         """Starts a thread or a process to run the sender concurrently
