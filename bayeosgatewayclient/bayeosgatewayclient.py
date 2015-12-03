@@ -343,9 +343,9 @@ class BayEOSSender(object):
                 res = self.send()
                 if res > 0:
                     print 'Successfully sent ' + str(res) + ' frames.'
-                sleep(sleep_sec)
             except Exception as err:
                 sys.stderr.write('Exception:' + str(err) + '\n') 
+            sleep(sleep_sec)
 
     def start(self, sleep_sec=DEFAULTS['sender_sleep_time'], thread=True):
         """Starts a thread or a process to run the sender concurrently
