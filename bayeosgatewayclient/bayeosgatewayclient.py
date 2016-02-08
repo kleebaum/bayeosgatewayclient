@@ -97,8 +97,7 @@ class BayEOSWriter(object):
             except OSError as err:
                 logging.critical('OSError: ' + str(err) + ' Could not create dir.')
                 exit()
-        chdir(self.path)
-        files = glob('*.act')
+        files = glob(self.path+'/*.act')
         for each_file in files:
             try:
                 rename(each_file, each_file.replace('.act', '.rd'))
@@ -117,8 +116,7 @@ class BayEOSWriter(object):
         if self.file.tell() + frame_length + 10 > self.max_chunk or time() - self.current_timestamp > self.max_time:
             self.file.close()
             try:
-                chdir(self.path)
-                rename(self.current_name + '.act', self.current_name + '.rd')
+                rename(self.path + '/' + self.current_name + '.act', self.path + '/' +  self.current_name + '.rd')
                 logging.debug('File '+ self.current_name + '.rd ready for post')
 
             except OSError as err:
@@ -133,7 +131,7 @@ class BayEOSWriter(object):
         self.current_timestamp = time()
         [sec, usec] = string.split(str(self.current_timestamp), '.')
         self.current_name = sec + '-' + usec
-        self.file = open(self.current_name + '.act', 'wb')
+        self.file = open(self.path + '/' + self.current_name + '.act', 'wb')
 
     def save(self, values, value_type=0x41, offset=0, timestamp=0, origin=None):
         """Generic frame saving method.
@@ -240,12 +238,11 @@ class BayEOSSender(object):
         @return number of frames in directory
         """
         try:
-            chdir(path)
+            files = glob(path + '/*.rd')
         except OSError as err:
             logging.warning('OSError: ' + str(err))
             return 0
-
-        files = glob('*.rd')
+        
         if len(files) == 0:
             return 0
 
@@ -259,7 +256,7 @@ class BayEOSSender(object):
                 continue
 
             try:
-                count = self.__send_file(files[i], path)
+                count = self.__send_file(files[i])
             except:
                 logging.warning('Sender __send_file error')
                 count=0
@@ -276,20 +273,19 @@ class BayEOSSender(object):
             while i < len(files):        
                 logging.debug('moving ' + files[i] + ' to backup_path')
                 try:
-                    move(files[i], self.backup_path + '/' + files[i])
+                    move(files[i], files[i].replace(self.path,self.backup_path))
                 except OSError as err:
                     logging.warning('OSError: ' + str(err))
                 i += 1
 
         return count_frames
 
-    def __send_file(self, file_name, path):
+    def __send_file(self, file_name):
         """Reads one file and tries to send its content to the gateway.
         On success the file is deleted or renamed to *.bak ending.
         Always the oldest file is used.
         @return number of successfully posted frames in one file
         """
-        chdir(path)
         current_file = open(file_name, 'rb')  # opens oldest file
         post_request = '&sender=' + urllib.quote_plus(self.name)
         frames = ''
@@ -314,7 +310,7 @@ class BayEOSSender(object):
 
         backup_file_name = file_name.replace('.rd', '.bak')
         if self.backup_path:
-            backup_file_name = self.backup_path + '/' + backup_file_name
+            backup_file_name.replace(self.path, self.backup_path)
 
         if frames:  # content found for post request
             try:
@@ -346,7 +342,7 @@ class BayEOSSender(object):
         opener = urllib2.build_opener(handler)
         req = urllib2.Request(self.url, post_request)
         req.add_header('Accept', 'text/html')
-        req.add_header('User-Agent', 'BayEOS-Python-Gateway-Client/0.2.5')
+        req.add_header('User-Agent', 'BayEOS-Python-Gateway-Client/0.2.6')
         try:
             opener.open(req)
             return 1
