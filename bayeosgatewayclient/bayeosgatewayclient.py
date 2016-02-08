@@ -119,6 +119,8 @@ class BayEOSWriter(object):
             try:
                 chdir(self.path)
                 rename(self.current_name + '.act', self.current_name + '.rd')
+                logging.debug('File '+ self.current_name + '.rd ready for post')
+
             except OSError as err:
                 logging.warning(str(err) + '. Could not find file: ' + self.current_name + '.act')
             self.__start_new_file()
@@ -251,11 +253,17 @@ class BayEOSSender(object):
         i = 0
         while i < len(files):
             if(os.stat(files[i]).st_size==0):
+                logging.warning('Empty file. Removing')
                 os.remove(files[i])
                 i += 1
                 continue
 
-            count = self.__send_file(files[i], path)
+            try:
+                count = self.__send_file(files[i], path)
+            except:
+                logging.warning('Sender __send_file error')
+                count=0
+            
             if count:
                 i += 1
                 count_frames += count
@@ -265,7 +273,8 @@ class BayEOSSender(object):
         # on post error we did not run to the end
         # move files to backup_path
         if self.backup_path and path != self.backup_path:
-            while i < len(files):
+            while i < len(files):        
+                logging.debug('moving ' + files[i] + ' to backup_path')
                 try:
                     move(files[i], self.backup_path + '/' + files[i])
                 except OSError as err:
@@ -308,16 +317,22 @@ class BayEOSSender(object):
             backup_file_name = self.backup_path + '/' + backup_file_name
 
         if frames:  # content found for post request
-            post_result = self.__post(post_request + frames)
+            try:
+                post_result = self.__post(post_request + frames)
+            except:
+                logging.warning('sender __post error')
+                return 0
+            
             if post_result == 1:  # successfuly posted
                 if self.remove:
                     os.remove(file_name)
                 else:
                     move(file_name, backup_file_name)
                 return count_frames
-            return 0  # post failure
+            return 0  # post without success but error catched
         else:  # broken file
             move(file_name, backup_file_name)
+            logging.warning('No frames in file. Move to ' + backup_file_name)
         return 0
 
     def __post(self, post_request):
@@ -331,7 +346,7 @@ class BayEOSSender(object):
         opener = urllib2.build_opener(handler)
         req = urllib2.Request(self.url, post_request)
         req.add_header('Accept', 'text/html')
-        req.add_header('User-Agent', 'BayEOS-Python-Gateway-Client/0.2.4')
+        req.add_header('User-Agent', 'BayEOS-Python-Gateway-Client/0.2.5')
         try:
             opener.open(req)
             return 1
@@ -344,6 +359,8 @@ class BayEOSSender(object):
                 logging.warning('Post error: ' + str(err))
         except urllib2.URLError as err:
             logging.warning('URLError: ' + str(err))
+        except:
+            logging.warning('Unspecified post error')
         return 0
 
     def run(self, sleep_sec=DEFAULTS['sender_sleep_time']):
