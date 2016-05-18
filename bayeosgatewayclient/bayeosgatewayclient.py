@@ -342,7 +342,7 @@ class BayEOSSender(object):
         opener = urllib2.build_opener(handler)
         req = urllib2.Request(self.url, post_request)
         req.add_header('Accept', 'text/html')
-        req.add_header('User-Agent', 'BayEOS-Python-Gateway-Client/0.2.6')
+        req.add_header('User-Agent', 'BayEOS-Python-Gateway-Client/0.2.7')
         try:
             opener.open(req)
             return 1
