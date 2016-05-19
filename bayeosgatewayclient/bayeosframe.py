@@ -112,7 +112,7 @@ class DataFrame(BayEOSFrame):
         for key, value in values.iteritems():
             if offset_type == 0x40:  # Data Frame with channel indices
                 frame += pack('<B', int(key))
-            elif offset_type == 0x80: # labeled channel type
+            elif offset_type == 0x60: # labeled channel type
                 frame += pack('<B',len(str(key)))
                 frame += str(key)
             frame += pack(val_format, value)
@@ -140,7 +140,7 @@ class DataFrame(BayEOSFrame):
             if offset_type == 0x40:
                 key = unpack('<B', self.frame[pos:pos + 1])[0]
                 pos += 1
-            elif offset_type == 0x80:
+            elif offset_type == 0x60:
                 labellength = unpack('<B', self.frame[pos:pos + 1])[0]
                 pos += 1
                 key= self.frame[pos:pos + labellength]
