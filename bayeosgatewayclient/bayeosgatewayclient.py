@@ -97,7 +97,7 @@ class BayEOSWriter(object):
             except OSError as err:
                 logging.critical('OSError: ' + str(err) + ' Could not create dir.')
                 exit()
-        files = glob(self.path+'/*.act')
+        files = glob(os.path.join(self.path,'*.act'))
         for each_file in files:
             try:
                 rename(each_file, each_file.replace('.act', '.rd'))
@@ -116,9 +116,9 @@ class BayEOSWriter(object):
         if self.file.tell() + frame_length + 10 > self.max_chunk or time() - self.current_timestamp > self.max_time:
             self.file.close()
             try:
-                rename(self.path + '/' + self.current_name + '.act', self.path + '/' +  self.current_name + '.rd')
+                p = os.path.join(self.path,self.current_name)                 
+                rename(p + '.act', p + '.rd')
                 logging.debug('File '+ self.current_name + '.rd ready for post')
-
             except OSError as err:
                 logging.warning(str(err) + '. Could not find file: ' + self.current_name + '.act')
             self.__start_new_file()
@@ -131,7 +131,7 @@ class BayEOSWriter(object):
         self.current_timestamp = time()
         [sec, usec] = string.split(str(self.current_timestamp), '.')
         self.current_name = sec + '-' + usec
-        self.file = open(self.path + '/' + self.current_name + '.act', 'wb')
+        self.file = open(os.path.join(self.path,self.current_name + '.act'), 'wb')
 
     def save(self, values, value_type=0x41, offset=0, timestamp=0, origin=None):
         """Generic frame saving method.
@@ -183,7 +183,8 @@ class BayEOSWriter(object):
         """
         logging.info('Flushed writer.')
         self.file.close()
-        rename(self.current_name + '.act', self.current_name + '.rd')
+        
+        rename(os.path.join(self.path,self.current_name + '.act'), os.path.join(self.path,self.current_name + '.rd'))
         self.__start_new_file()
 
 class BayEOSSender(object):
@@ -238,7 +239,7 @@ class BayEOSSender(object):
         @return number of frames in directory
         """
         try:
-            files = glob(path + '/*.rd')
+            files = glob(os.path.join(path,'*.rd'))
         except OSError as err:
             logging.warning('OSError: ' + str(err))
             return 0
@@ -432,7 +433,7 @@ class BayEOSGatewayClient(object):
         """Initializes folder to save data in.
         @param name: will be the folder name
         """
-        path = self.__get_option('path') + '/' + re.sub('[-]+|[/]+|[\\\\]+|["]+|[\']+', '_', name)
+        path = os.path.join(self.__get_option('path'),re.sub('[-]+|[/]+|[\\\\]+|["]+|[\']+', '_', name))
         if not os.path.isdir(path):
             try:
                 os.makedirs(path, 0700)
