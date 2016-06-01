@@ -88,7 +88,7 @@ class BayEOSWriter(object):
         @param max_time: maximum time when a new file is started
         """
         logging.getLogger().setLevel(log_level)
-        self.path = path
+        self.path = os.path.abspath(path)
         self.max_chunk = max_chunk
         self.max_time = max_time
         if not os.path.isdir(self.path):
@@ -209,28 +209,36 @@ class BayEOSSender(object):
         """
         if not password:
             exit('No gateway password was found.')
-        self.path = path
+        self.path = os.path.abspath(path)
         self.name = name
         self.url = url
         self.password = password
         self.user = user
         self.absolute_time = absolute_time
         self.remove = remove
-        self.backup_path = backup_path
         if backup_path and not os.path.isdir(backup_path):
             try:
-                os.makedirs(self.backup_path, 0700)
+                os.makedirs(backup_path, 0700)
             except OSError as err:
                 logging.warning('OSError: ' + str(err))
+            backup_path=os.path.abspath(backup_path)
+        self.backup_path = backup_path
+
 
     def send(self):
         """Keeps sending until all files are sent or an error occurs.
         @return number of posted frames as an integer
         """
         count_frames = 0
-        count_frames += self.__send_files(self.path)
+        try:
+            count_frames += self.__send_files(self.path)
+        except:
+            logging.warning('Send error on __send_files(: ' + self.path + ')')
         if self.backup_path:
-            count_frames += self.__send_files(self.backup_path)
+            try:
+                count_frames += self.__send_files(self.backup_path)
+            except:
+                logging.warning('Send error on __send_files(: ' + self.backup_path + ')')
         return count_frames
 
     def __send_files(self, path):
@@ -343,7 +351,7 @@ class BayEOSSender(object):
         opener = urllib2.build_opener(handler)
         req = urllib2.Request(self.url, post_request)
         req.add_header('Accept', 'text/html')
-        req.add_header('User-Agent', 'BayEOS-Python-Gateway-Client/0.2.7')
+        req.add_header('User-Agent', 'BayEOS-Python-Gateway-Client/0.2.8')
         try:
             opener.open(req)
             return 1
