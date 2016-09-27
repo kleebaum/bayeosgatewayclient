@@ -260,6 +260,24 @@ class OriginFrame(BayEOSFrame):
         res['origin']=self.frame[2:length + 2]
         return BayEOSFrame.parse_frame(self.frame[length + 2:],res)
 
+class RoutedOriginFrame(BayEOSFrame):
+    """Origin Frame Factory class."""
+    def create(self, origin, nested_frame):
+        """Creates a routed BayEOS Origin Frame.
+        @param origin: name to be appended in the gateway
+        @param nested_frame: valid BayEOS frame
+        """
+        origin = origin[0:255]
+        self.frame += pack('<B', len(origin)) + origin + nested_frame
+ 
+    def parse(self,res={'origin':'','timestamp':time()}):
+        """Parses a binary coded routed Origin Frame into a Python dictionary.
+        @return origin and nested_frame as a binary String
+        """
+        length = unpack('<B', self.frame[1:2])[0]
+        res['origin']+='/'+self.frame[2:length + 2]
+        return BayEOSFrame.parse_frame(self.frame[length + 2:],res)
+
 class BinaryFrame(BayEOSFrame):
     """Binary Frame Factory class."""
     def create(self, string):
@@ -376,7 +394,7 @@ FRAME_TYPES = {0x1: {'name' : 'Data Frame',
                0xc: {'name' : 'Timestamp Frame',
                      'class' : TimestampFrame},
                0xd: {'name' : 'Routed Origin Frame',
-                     'class' : OriginFrame},
+                     'class' : RoutedOriginFrame},
                0xe: {'name' : 'Gateway Command',
                      'class' : CommandFrame},
                0xf: {'name' : 'Checksum Frame',

@@ -267,7 +267,7 @@ class BayEOSSender(object):
             try:
                 count = self.__send_file(files[i])
             except:
-                logging.warning('Sender __send_file error')
+                logging.warning('Sender __send_file error on '+ files[i])
                 count=0
             
             if count:
