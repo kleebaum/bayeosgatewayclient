@@ -12,7 +12,7 @@ writer.save_msg('Writer was started.', origin='Python-Writer-Example')
 while True:
     #writer.save_msg('Writer was started.', origin='Python-Writer-Example')
     print 'adding frame\n'
-    writer.save(values=[1,2,3], value_type=0x41, origin='Python-Writer-Example')
+    writer.save(values=[1,2,3], value_type=0x41, origin='Python-Writer-Example',routed=True)
     writer.save(values=[2.1, 3, 20.5], value_type=0x02, offset=2)
     
     writer.save(values={"c1":1.2,"xx":1.7},value_type=0x61) 

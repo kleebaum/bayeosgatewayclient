@@ -69,20 +69,28 @@ timestamp_frame_msec.print_dict()
 
 
 
+
 # Checksum Frame
+simple_checksum_frame = BayEOSFrame.factory(0xf)
+simple_checksum_frame.create(data_frame_simple.frame)
+simple_checksum_frame.print_dict()
+simple_checksum_frame.print_hex()
+
 checksum_frame = BayEOSFrame.factory(0xf)
 checksum_frame.create(routed_frame.frame)
 checksum_frame.print_dict()
 checksum_frame.print_hex()
-print BayEOSFrame.parse_frame(checksum_frame.frame)
+#print BayEOSFrame.parse_frame(checksum_frame.frame)
 
 
 # routed Origin Frame
 routed_origin_frame = BayEOSFrame.factory(0xd)
 routed_origin_frame.create(origin="RoutedOrigin", nested_frame=checksum_frame.frame)
 routed_origin_frame.print_dict()
+routed_origin_frame.print_hex()
 
 routed_frame_rssi = BayEOSFrame.factory(0x8)
 routed_frame_rssi.create(12,3332,64,routed_origin_frame.frame)
 routed_frame_rssi.print_dict()
+routed_frame_rssi.print_hex()
 

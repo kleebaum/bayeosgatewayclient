@@ -133,13 +133,14 @@ class BayEOSWriter(object):
         self.current_name = sec + '-' + usec
         self.file = open(os.path.join(self.path,self.current_name + '.act'), 'wb')
 
-    def save(self, values, value_type=0x41, offset=0, timestamp=0, origin=None):
+    def save(self, values, value_type=0x41, offset=0, timestamp=0, origin=None, routed=False):
         """Generic frame saving method.
         @param values: list with [channel index, value] tuples or just values (..,..) or [..,..]
         @param value_type: defines Offset and Data Type
         @param offset: defines Channel Offset
         @param timestamp: Unix epoch time stamp, if zero system time is used
         @param origin: if defined, it is used as a name
+        @param routed: only relevant with origin - if true, routed origin is created
         """
         data_frame = BayEOSFrame.factory(0x1)
         data_frame.create(values, value_type, offset)
@@ -150,11 +151,13 @@ class BayEOSWriter(object):
             origin_frame.create(origin=origin, nested_frame=data_frame.frame)
             self.__save_frame(origin_frame.frame, timestamp)
 
-    def save_msg(self, message, error=False, timestamp=0, origin=None):
+    def save_msg(self, message, error=False, timestamp=0, origin=None, routed=False):
         """Saves Messages or Error Messages to Gateway.
         @param message: String to send
         @param error: when true, an Error Message is sent
         @param timestamp: Unix epoch time stamp, if zero system time is used
+        @param origin: if defined, it is used as a name
+        @param routed: only relevant with origin - if true, routed origin is created
         """
         if error:
             msg_frame = BayEOSFrame.factory(0x5)  # instantiate ErrorMessage Frame
@@ -168,12 +171,15 @@ class BayEOSWriter(object):
             origin_frame.create(origin=origin, nested_frame=msg_frame.frame)
             self.__save_frame(origin_frame.frame, timestamp)
             
-    def save_frame(self, frame, timestamp=0, origin=None):
+    def save_frame(self, frame, timestamp=0, origin=None, routed=False):
         """Saves a BayEOS Frame either as it is or wrapped in an Origin Frame."""
         if not origin:
             self.__save_frame(frame, timestamp); 
         else:
-            origin_frame = BayEOSFrame.factory(0xb)
+            if routed:
+                origin_frame = BayEOSFrame.factory(0xd)
+            else:   
+                origin_frame = BayEOSFrame.factory(0xb)
             origin_frame.create(origin=origin, nested_frame=frame)
             self.__save_frame(origin_frame.frame, timestamp)
 
