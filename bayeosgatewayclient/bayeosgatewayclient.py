@@ -357,7 +357,7 @@ class BayEOSSender(object):
         opener = urllib2.build_opener(handler)
         req = urllib2.Request(self.url, post_request)
         req.add_header('Accept', 'text/html')
-        req.add_header('User-Agent', 'BayEOS-Python-Gateway-Client/0.3.0')
+        req.add_header('User-Agent', 'BayEOS-Python-Gateway-Client/0.3.3')
         try:
             opener.open(req)
             return 1
@@ -388,16 +388,27 @@ class BayEOSSender(object):
             except:
                 logging.warning('Unknown exception in run()\n')
             sleep(sleep_sec)
+    
+    def run_thread(self,sleep_sec=DEFAULTS['sender_sleep_time']):
+        """Starts a run thread. When this thread terminates it starts a new run thread
+        @param sleep_sec: specifies the sleep time
+        """
+        while True:
+            t1 = Thread(target=self.run, args=(sleep_sec,))
+            t1.start()
+            t1.join()
+            logging.warning('Sender run thread has terminated - starting new one\n')
+        
 
     def start(self, sleep_sec=DEFAULTS['sender_sleep_time'], thread=True):
         """Starts a thread or a process to run the sender concurrently
         @param sleep_sec: specifies the sleep time
         """
         if thread:
-            start_new_thread(self.run, (sleep_sec,))
+            start_new_thread(self.run_thread, (sleep_sec,))
             logging.info('started sender thread')
         else:
-            Process(target=self.run, args=(sleep_sec,)).start()
+            Process(target=self.run_thread, args=(sleep_sec,)).start()
             logging.info('started sender process')
 
 class BayEOSGatewayClient(object):
