@@ -2,17 +2,24 @@
 from time import sleep
 from bayeosgatewayclient import BayEOSWriter, BayEOSSender
 import logging
+import tempfile
+from os import path
 
-PATH = '/tmp/bayeos-device/'
+PATH = path.join(tempfile.gettempdir(),'bayeos-device')
+BACKUP_PATH =  path.join(tempfile.gettempdir(),'bayeos-device-backup')
 NAME = 'Python-Thread-WithLogging'
+
 URL = 'http://bayconf.bayceer.uni-bayreuth.de/gateway/frame/saveFlat'
 
 writer = BayEOSWriter(PATH,max_time=10,log_level=logging.DEBUG)
 writer.save_msg('Writer was started.')
 
-sender = BayEOSSender(PATH, NAME, URL,backup_path='/dev/shm/bayeos-device')
+sender = BayEOSSender(PATH, NAME, URL,backup_path=BACKUP_PATH,log_level=logging.DEBUG)
 sender.start()
 
+nr=0
 while True:
-    writer.save([2.1, 3, 20.5])
+    writer.save([nr, 3, 20.5])
+    #writer.flush()
+    nr+=1
     sleep(5)

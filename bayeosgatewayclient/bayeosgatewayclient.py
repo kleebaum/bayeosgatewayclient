@@ -86,9 +86,10 @@ class BayEOSWriter(object):
         @param path: path of queue directory
         @param max_chunk: maximum file size in Bytes, when reached a new file is started
         @param max_time: maximum time when a new file is started
+        @param log_level: log level according to logging package
         """
         logging.getLogger().setLevel(log_level)
-        self.path = path
+        self.path = os.path.abspath(path)
         self.max_chunk = max_chunk
         self.max_time = max_time
         if not os.path.isdir(self.path):
@@ -97,7 +98,7 @@ class BayEOSWriter(object):
             except OSError as err:
                 logging.critical('OSError: ' + str(err) + ' Could not create dir.')
                 exit()
-        files = glob(self.path+'/*.act')
+        files = glob(os.path.join(self.path,'*.act'))
         for each_file in files:
             try:
                 rename(each_file, each_file.replace('.act', '.rd'))
@@ -116,9 +117,9 @@ class BayEOSWriter(object):
         if self.file.tell() + frame_length + 10 > self.max_chunk or time() - self.current_timestamp > self.max_time:
             self.file.close()
             try:
-                rename(self.path + '/' + self.current_name + '.act', self.path + '/' +  self.current_name + '.rd')
+                p = os.path.join(self.path,self.current_name)                 
+                rename(p + '.act', p + '.rd')
                 logging.debug('File '+ self.current_name + '.rd ready for post')
-
             except OSError as err:
                 logging.warning(str(err) + '. Could not find file: ' + self.current_name + '.act')
             self.__start_new_file()
@@ -131,15 +132,16 @@ class BayEOSWriter(object):
         self.current_timestamp = time()
         [sec, usec] = string.split(str(self.current_timestamp), '.')
         self.current_name = sec + '-' + usec
-        self.file = open(self.path + '/' + self.current_name + '.act', 'wb')
+        self.file = open(os.path.join(self.path,self.current_name + '.act'), 'wb')
 
-    def save(self, values, value_type=0x41, offset=0, timestamp=0, origin=None):
+    def save(self, values, value_type=0x41, offset=0, timestamp=0, origin=None, routed=False):
         """Generic frame saving method.
         @param values: list with [channel index, value] tuples or just values (..,..) or [..,..]
         @param value_type: defines Offset and Data Type
         @param offset: defines Channel Offset
         @param timestamp: Unix epoch time stamp, if zero system time is used
         @param origin: if defined, it is used as a name
+        @param routed: only relevant with origin - if true, routed origin is created
         """
         data_frame = BayEOSFrame.factory(0x1)
         data_frame.create(values, value_type, offset)
@@ -150,11 +152,13 @@ class BayEOSWriter(object):
             origin_frame.create(origin=origin, nested_frame=data_frame.frame)
             self.__save_frame(origin_frame.frame, timestamp)
 
-    def save_msg(self, message, error=False, timestamp=0, origin=None):
+    def save_msg(self, message, error=False, timestamp=0, origin=None, routed=False):
         """Saves Messages or Error Messages to Gateway.
         @param message: String to send
         @param error: when true, an Error Message is sent
         @param timestamp: Unix epoch time stamp, if zero system time is used
+        @param origin: if defined, it is used as a name
+        @param routed: only relevant with origin - if true, routed origin is created
         """
         if error:
             msg_frame = BayEOSFrame.factory(0x5)  # instantiate ErrorMessage Frame
@@ -168,12 +172,15 @@ class BayEOSWriter(object):
             origin_frame.create(origin=origin, nested_frame=msg_frame.frame)
             self.__save_frame(origin_frame.frame, timestamp)
             
-    def save_frame(self, frame, timestamp=0, origin=None):
+    def save_frame(self, frame, timestamp=0, origin=None, routed=False):
         """Saves a BayEOS Frame either as it is or wrapped in an Origin Frame."""
         if not origin:
             self.__save_frame(frame, timestamp); 
         else:
-            origin_frame = BayEOSFrame.factory(0xb)
+            if routed:
+                origin_frame = BayEOSFrame.factory(0xd)
+            else:   
+                origin_frame = BayEOSFrame.factory(0xb)
             origin_frame.create(origin=origin, nested_frame=frame)
             self.__save_frame(origin_frame.frame, timestamp)
 
@@ -183,7 +190,8 @@ class BayEOSWriter(object):
         """
         logging.info('Flushed writer.')
         self.file.close()
-        rename(self.current_name + '.act', self.current_name + '.rd')
+        
+        rename(os.path.join(self.path,self.current_name + '.act'), os.path.join(self.path,self.current_name + '.rd'))
         self.__start_new_file()
 
 class BayEOSSender(object):
@@ -195,7 +203,8 @@ class BayEOSSender(object):
                  user=DEFAULTS['bayeosgateway_user'],
                  absolute_time=DEFAULTS['absolute_time'],
                  remove=DEFAULTS['remove'],
-                 backup_path=DEFAULTS['backup_path']):
+                 backup_path=DEFAULTS['backup_path'],
+                 log_level=logging.INFO):
         """Constructor for BayEOSSender instance.
         @param path: path where BayEOSWriter puts files
         @param name: sender name
@@ -204,32 +213,42 @@ class BayEOSSender(object):
         @param user: user on gateway
         @param absolute_time: if set to false, relative time is used (delay)
         @param remove: if set to false files are kept as .bak file in the BayEOSWriter directory
-        @param gateway_version: gateway version
+        @param backup_path: path 
+        @param log_level: log level according to logging package
         """
         if not password:
             exit('No gateway password was found.')
-        self.path = path
+        self.path = os.path.abspath(path)
         self.name = name
         self.url = url
         self.password = password
         self.user = user
         self.absolute_time = absolute_time
         self.remove = remove
-        self.backup_path = backup_path
+        logging.getLogger().setLevel(log_level)
         if backup_path and not os.path.isdir(backup_path):
             try:
-                os.makedirs(self.backup_path, 0700)
+                os.makedirs(backup_path, 0700)
             except OSError as err:
                 logging.warning('OSError: ' + str(err))
+            backup_path=os.path.abspath(backup_path)
+        self.backup_path = backup_path
+
 
     def send(self):
         """Keeps sending until all files are sent or an error occurs.
         @return number of posted frames as an integer
         """
         count_frames = 0
-        count_frames += self.__send_files(self.path)
+        try:
+            count_frames += self.__send_files(self.path)
+        except:
+            logging.warning('Send error on __send_files(: ' + self.path + ')')
         if self.backup_path:
-            count_frames += self.__send_files(self.backup_path)
+            try:
+                count_frames += self.__send_files(self.backup_path)
+            except:
+                logging.warning('Send error on __send_files(: ' + self.backup_path + ')')
         return count_frames
 
     def __send_files(self, path):
@@ -238,7 +257,7 @@ class BayEOSSender(object):
         @return number of frames in directory
         """
         try:
-            files = glob(path + '/*.rd')
+            files = glob(os.path.join(path,'*.rd'))
         except OSError as err:
             logging.warning('OSError: ' + str(err))
             return 0
@@ -258,7 +277,7 @@ class BayEOSSender(object):
             try:
                 count = self.__send_file(files[i])
             except:
-                logging.warning('Sender __send_file error')
+                logging.warning('Sender __send_file error on '+ files[i])
                 count=0
             
             if count:
@@ -304,7 +323,7 @@ class BayEOSSender(object):
                 else:  # Delayed Frame
                     wrapper_frame = BayEOSFrame.factory(0x7)
                 wrapper_frame.create(frame, timestamp)
-                frames += '&bayeosframes[]=' + base64.urlsafe_b64encode(wrapper_frame.frame)
+                frames += '&bayeosframes[]=' + urllib.quote_plus(base64.b64encode(wrapper_frame.frame))
             timestamp = current_file.read(8)
         current_file.close()
 
@@ -336,13 +355,14 @@ class BayEOSSender(object):
         @param post_request: query string for HTML POST request
         @return success (1) or failure (0)
         """
+        logging.debug("sender.__post")
         password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
         password_manager.add_password(None, self.url, self.user, self.password)
         handler = urllib2.HTTPBasicAuthHandler(password_manager)
         opener = urllib2.build_opener(handler)
         req = urllib2.Request(self.url, post_request)
         req.add_header('Accept', 'text/html')
-        req.add_header('User-Agent', 'BayEOS-Python-Gateway-Client/0.2.6')
+        req.add_header('User-Agent', 'BayEOS-Python-Gateway-Client/0.3.3')
         try:
             opener.open(req)
             return 1
@@ -373,16 +393,27 @@ class BayEOSSender(object):
             except:
                 logging.warning('Unknown exception in run()\n')
             sleep(sleep_sec)
+    
+    def run_thread(self,sleep_sec=DEFAULTS['sender_sleep_time']):
+        """Starts a run thread. When this thread terminates it starts a new run thread
+        @param sleep_sec: specifies the sleep time
+        """
+        while True:
+            t1 = Thread(target=self.run, args=(sleep_sec,))
+            t1.start()
+            t1.join()
+            logging.warning('Sender run thread has terminated - starting new one\n')
+        
 
     def start(self, sleep_sec=DEFAULTS['sender_sleep_time'], thread=True):
         """Starts a thread or a process to run the sender concurrently
         @param sleep_sec: specifies the sleep time
         """
         if thread:
-            start_new_thread(self.run, (sleep_sec,))
+            start_new_thread(self.run_thread, (sleep_sec,))
             logging.info('started sender thread')
         else:
-            Process(target=self.run, args=(sleep_sec,)).start()
+            Process(target=self.run_thread, args=(sleep_sec,)).start()
             logging.info('started sender process')
 
 class BayEOSGatewayClient(object):
@@ -432,7 +463,7 @@ class BayEOSGatewayClient(object):
         """Initializes folder to save data in.
         @param name: will be the folder name
         """
-        path = self.__get_option('path') + '/' + re.sub('[-]+|[/]+|[\\\\]+|["]+|[\']+', '_', name)
+        path = os.path.join(self.__get_option('path'),re.sub('[-]+|[/]+|[\\\\]+|["]+|[\']+', '_', name))
         if not os.path.isdir(path):
             try:
                 os.makedirs(path, 0700)
