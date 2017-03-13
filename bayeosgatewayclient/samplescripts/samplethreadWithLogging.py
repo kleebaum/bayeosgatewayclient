@@ -14,10 +14,12 @@ URL = 'http://bayconf.bayceer.uni-bayreuth.de/gateway/frame/saveFlat'
 writer = BayEOSWriter(PATH,max_time=10,log_level=logging.DEBUG)
 writer.save_msg('Writer was started.')
 
-sender = BayEOSSender(PATH, NAME, URL,backup_path=BACKUP_PATH)
+sender = BayEOSSender(PATH, NAME, URL,backup_path=BACKUP_PATH,log_level=logging.DEBUG)
 sender.start()
 
+nr=0
 while True:
-    writer.save([2.1, 3, 20.5])
-    writer.flush()
+    writer.save([nr, 3, 20.5])
+    #writer.flush()
+    nr+=1
     sleep(5)

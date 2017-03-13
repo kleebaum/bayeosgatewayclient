@@ -86,6 +86,7 @@ class BayEOSWriter(object):
         @param path: path of queue directory
         @param max_chunk: maximum file size in Bytes, when reached a new file is started
         @param max_time: maximum time when a new file is started
+        @param log_level: log level according to logging package
         """
         logging.getLogger().setLevel(log_level)
         self.path = os.path.abspath(path)
@@ -202,7 +203,8 @@ class BayEOSSender(object):
                  user=DEFAULTS['bayeosgateway_user'],
                  absolute_time=DEFAULTS['absolute_time'],
                  remove=DEFAULTS['remove'],
-                 backup_path=DEFAULTS['backup_path']):
+                 backup_path=DEFAULTS['backup_path'],
+                 log_level=logging.INFO):
         """Constructor for BayEOSSender instance.
         @param path: path where BayEOSWriter puts files
         @param name: sender name
@@ -211,7 +213,8 @@ class BayEOSSender(object):
         @param user: user on gateway
         @param absolute_time: if set to false, relative time is used (delay)
         @param remove: if set to false files are kept as .bak file in the BayEOSWriter directory
-        @param gateway_version: gateway version
+        @param backup_path: path 
+        @param log_level: log level according to logging package
         """
         if not password:
             exit('No gateway password was found.')
@@ -222,6 +225,7 @@ class BayEOSSender(object):
         self.user = user
         self.absolute_time = absolute_time
         self.remove = remove
+        logging.getLogger().setLevel(log_level)
         if backup_path and not os.path.isdir(backup_path):
             try:
                 os.makedirs(backup_path, 0700)
@@ -319,7 +323,7 @@ class BayEOSSender(object):
                 else:  # Delayed Frame
                     wrapper_frame = BayEOSFrame.factory(0x7)
                 wrapper_frame.create(frame, timestamp)
-                frames += '&bayeosframes[]=' + base64.urlsafe_b64encode(wrapper_frame.frame)
+                frames += '&bayeosframes[]=' + urllib.quote_plus(base64.b64encode(wrapper_frame.frame))
             timestamp = current_file.read(8)
         current_file.close()
 
@@ -351,6 +355,7 @@ class BayEOSSender(object):
         @param post_request: query string for HTML POST request
         @return success (1) or failure (0)
         """
+        logging.debug("sender.__post")
         password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
         password_manager.add_password(None, self.url, self.user, self.password)
         handler = urllib2.HTTPBasicAuthHandler(password_manager)
