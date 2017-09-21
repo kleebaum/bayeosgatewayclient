@@ -1,6 +1,6 @@
 """bayeosgatewayclient"""
-import os, string, urllib, urllib2, base64, re, sys
-from os import chdir, rename
+import os, string, base64, re
+from os import rename
 from tempfile import gettempdir
 from struct import pack, unpack
 from socket import gethostname
@@ -15,6 +15,7 @@ from shutil import move
 import argparse
 import ConfigParser
 import logging
+import requests
 
 logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.WARNING)
 
@@ -124,6 +125,7 @@ class BayEOSWriter(object):
                 logging.warning(str(err) + '. Could not find file: ' + self.current_name + '.act')
             self.__start_new_file()
         self.file.write(pack('<d', timestamp) + pack('<h', frame_length) + frame)
+        self.file.flush()
         logging.debug('Frame saved.')
 
 
@@ -275,7 +277,7 @@ class BayEOSSender(object):
                 continue
 
             try:
-                count = self.__send_file(files[i])
+                count = self.__post_file(files[i])
             except:
                 logging.warning('Sender __send_file error on '+ files[i])
                 count=0
@@ -298,24 +300,22 @@ class BayEOSSender(object):
                 i += 1
 
         return count_frames
-
-    def __send_file(self, file_name):
+    
+    def __post_file(self, file_name):
         """Reads one file and tries to send its content to the gateway.
+        uses the requests library!!
         On success the file is deleted or renamed to *.bak ending.
-        Always the oldest file is used.
         @return number of successfully posted frames in one file
         """
         current_file = open(file_name, 'rb')  # opens oldest file
-        post_request = '&sender=' + urllib.quote_plus(self.name)
-        frames = ''
-        count_frames = 0
+        data={'sender': self.name}
+        frames=[]
         timestamp = current_file.read(8)
         while timestamp:  # until end of file
             timestamp = unpack('<d', timestamp)[0]
             frame_length = unpack('<h', current_file.read(2))[0]
             frame = current_file.read(frame_length)
             if frame:
-                count_frames += 1
                 if self.absolute_time:  # Timestamp Frame
                     # millisecond resolution from 1970-01-01
                     wrapper_frame = BayEOSFrame.factory(0xc)
@@ -323,62 +323,37 @@ class BayEOSSender(object):
                 else:  # Delayed Frame
                     wrapper_frame = BayEOSFrame.factory(0x7)
                 wrapper_frame.create(frame, timestamp)
-                frames += '&bayeosframes[]=' + urllib.quote_plus(base64.b64encode(wrapper_frame.frame))
+                frames.append(base64.b64encode(wrapper_frame.frame))
             timestamp = current_file.read(8)
         current_file.close()
-
         backup_file_name = file_name.replace('.rd', '.bak')
         if self.backup_path:
             backup_file_name.replace(self.path, self.backup_path)
-
-        if frames:  # content found for post request
-            try:
-                post_result = self.__post(post_request + frames)
-            except:
-                logging.warning('sender __post error')
-                return 0
-            
-            if post_result == 1:  # successfuly posted
-                if self.remove:
-                    os.remove(file_name)
-                else:
-                    move(file_name, backup_file_name)
-                return count_frames
-            return 0  # post without success but error catched
-        else:  # broken file
+        if len(frames)==0:
             move(file_name, backup_file_name)
             logging.warning('No frames in file. Move to ' + backup_file_name)
-        return 0
-
-    def __post(self, post_request):
-        """Posts frames to gateway.
-        @param post_request: query string for HTML POST request
-        @return success (1) or failure (0)
-        """
-        logging.debug("sender.__post")
-        password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
-        password_manager.add_password(None, self.url, self.user, self.password)
-        handler = urllib2.HTTPBasicAuthHandler(password_manager)
-        opener = urllib2.build_opener(handler)
-        req = urllib2.Request(self.url, post_request)
-        req.add_header('Accept', 'text/html')
-        req.add_header('User-Agent', 'BayEOS-Python-Gateway-Client/0.3.5')
+            return 0
+        
+        data['bayeosframes[]']=frames
+        headers={'user-agent': 'BayEOS-Python-Gateway-Client/0.3.6'}
         try:
-            opener.open(req)
-            return 1
-        except urllib2.HTTPError as err:
-            if err.code == 401:
-                logging.warning('Authentication failed.')
-            elif err.code == 404:
-                logging.warning('URL ' + self.url + ' is invalid.')
+            r=requests.post(self.url,data=data,auth=(self.user, self.password),headers=headers)
+#            r.raise_for_status()
+        except requests.exceptions.RequestException as e:  
+            logging.warning('sender __post error:'+e)
+            return 0
+        
+        if r.status_code==200: # all fine!
+            if self.remove:
+                os.remove(file_name)
             else:
-                logging.warning('Post error: ' + str(err))
-        except urllib2.URLError as err:
-            logging.warning('URLError: ' + str(err))
-        except:
-            logging.warning('Unspecified post error')
+                move(file_name, backup_file_name)
+            return len(frames)
+        
+        logging.warning('sender __post error code: '+r.status_code)
+        
         return 0
-
+ 
     def run(self, sleep_sec=DEFAULTS['sender_sleep_time']):
         """Tries to send frames within a certain interval.
         @param sleep_sec: specifies the sleep time

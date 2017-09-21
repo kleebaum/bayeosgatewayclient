@@ -17,5 +17,5 @@ sender = BayEOSSender(PATH, NAME, URL)
 sender.start()
 
 while True:
-    writer.save(values={"c1":1.2,"xx":1.7},value_type=0x61)     
+    writer.save(values={"c1":1.2,"xx":1.7},value_type=0x61) 
     sleep(5)
