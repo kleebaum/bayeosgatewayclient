@@ -117,14 +117,8 @@ class BayEOSWriter(object):
             timestamp = time()
         frame_length = len(frame)
         if self.file.tell() + frame_length + 10 > self.max_chunk or time() - self.current_timestamp > self.max_time:
-            self.file.close()
-            try:
-                p = (self.current_name+'$$__end_key__$$').replace('.act$$__end_key__$$','.rd')                 
-                rename(self.current_name, p)
-                logging.debug('File '+ p + ' ready for post')
-            except OSError as err:
-                logging.warning(str(err) + '. Could not find file: ' + self.current_name )
-            self.__start_new_file()
+            self.flush()
+            
         self.file.write(pack('<d', timestamp) + pack('<h', frame_length) + frame)
         self.file.flush()
         logging.debug('Frame saved.')
@@ -193,8 +187,12 @@ class BayEOSWriter(object):
         """
         logging.info('Flushed writer.')
         self.file.close()
-        
-        rename(os.path.join(self.path,self.current_name + '.act'), os.path.join(self.path,self.current_name + '.rd'))
+        try:
+            p = (self.current_name+'$$__end_key__$$').replace('.act$$__end_key__$$','.rd')                 
+            rename(self.current_name, p)
+            logging.debug('File '+ p + ' ready for post')
+        except OSError as err:
+            logging.warning(str(err) + '. Could not find file: ' + self.current_name )
         self.__start_new_file()
 
 class BayEOSSender(object):
@@ -336,7 +334,7 @@ class BayEOSSender(object):
             return 0
         
         data['bayeosframes[]']=frames
-        headers={'user-agent': 'BayEOS-Python-Gateway-Client/0.3.7'}
+        headers={'user-agent': 'BayEOS-Python-Gateway-Client/0.3.8'}
         try:
             r=requests.post(self.url,data=data,auth=(self.user, self.password),headers=headers, timeout=10)
 #            r.raise_for_status()
