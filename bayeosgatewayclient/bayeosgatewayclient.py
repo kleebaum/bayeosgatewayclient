@@ -16,6 +16,7 @@ import argparse
 import ConfigParser
 import logging
 import requests
+import tempfile
 
 logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.WARNING)
 
@@ -118,11 +119,11 @@ class BayEOSWriter(object):
         if self.file.tell() + frame_length + 10 > self.max_chunk or time() - self.current_timestamp > self.max_time:
             self.file.close()
             try:
-                p = os.path.join(self.path,self.current_name)                 
-                rename(p + '.act', p + '.rd')
-                logging.debug('File '+ self.current_name + '.rd ready for post')
+                p = (self.current_name+'$$__end_key__$$').replace('.act$$__end_key__$$','.rd')                 
+                rename(self.current_name, p)
+                logging.debug('File '+ p + ' ready for post')
             except OSError as err:
-                logging.warning(str(err) + '. Could not find file: ' + self.current_name + '.act')
+                logging.warning(str(err) + '. Could not find file: ' + self.current_name )
             self.__start_new_file()
         self.file.write(pack('<d', timestamp) + pack('<h', frame_length) + frame)
         self.file.flush()
@@ -132,9 +133,9 @@ class BayEOSWriter(object):
     def __start_new_file(self):
         """Opens a new file with ending .act and determines current file name."""
         self.current_timestamp = time()
-        [sec, usec] = string.split(str(self.current_timestamp), '.')
-        self.current_name = sec + '-' + usec
-        self.file = open(os.path.join(self.path,self.current_name + '.act'), 'wb')
+        [sec, usec] = string.split(str(self.current_timestamp), '.')        
+        [fd, self.current_name] = tempfile.mkstemp('.act',sec + '-' + usec + '-',self.path)
+        self.file = open(self.current_name, 'wb')
 
     def save(self, values, value_type=0x41, offset=0, timestamp=0, origin=None, routed=False):
         """Generic frame saving method.
@@ -335,9 +336,9 @@ class BayEOSSender(object):
             return 0
         
         data['bayeosframes[]']=frames
-        headers={'user-agent': 'BayEOS-Python-Gateway-Client/0.3.6'}
+        headers={'user-agent': 'BayEOS-Python-Gateway-Client/0.3.7'}
         try:
-            r=requests.post(self.url,data=data,auth=(self.user, self.password),headers=headers)
+            r=requests.post(self.url,data=data,auth=(self.user, self.password),headers=headers, timeout=10)
 #            r.raise_for_status()
         except requests.exceptions.RequestException as e:  
             logging.warning('sender __post error:'+e)
