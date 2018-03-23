@@ -129,6 +129,7 @@ class BayEOSWriter(object):
         self.current_timestamp = time()
         [sec, usec] = string.split(str(self.current_timestamp), '.')        
         [fd, self.current_name] = tempfile.mkstemp('.act',sec + '-' + usec + '-',self.path)
+        os.close(fd)
         self.file = open(self.current_name, 'wb')
 
     def save(self, values, value_type=0x41, offset=0, timestamp=0, origin=None, routed=False):
@@ -334,7 +335,7 @@ class BayEOSSender(object):
             return 0
         
         data['bayeosframes[]']=frames
-        headers={'user-agent': 'BayEOS-Python-Gateway-Client/0.3.8'}
+        headers={'user-agent': 'BayEOS-Python-Gateway-Client/0.3.9'}
         try:
             r=requests.post(self.url,data=data,auth=(self.user, self.password),headers=headers, timeout=10)
 #            r.raise_for_status()
